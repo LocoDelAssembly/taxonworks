@@ -21,6 +21,11 @@ jobs:
       run: sudo apt-get update
     - name: Install apt packages
       run: sudo apt-get install -y imagemagick tesseract-ocr libgeos-dev libproj-dev postgresql-10-postgis-2.4
+    - name: Set up TaxonWorks (Just using Travis configs as-is for now)
+      run: |
+        cp config/application_settings.yml.travis config/application_settings.yml
+        cp config/database.yml.travis config/database.yml
+        cp config/secrets.yml.example config/secrets.yml
     - name: Build and test with Rake
       run: |
         gem install bundler
