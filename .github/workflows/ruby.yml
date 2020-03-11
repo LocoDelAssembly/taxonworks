@@ -17,6 +17,8 @@ jobs:
       uses: actions/setup-ruby@v1
       with:
         ruby-version: 2.6.5
+    - name: Update apt cache
+      run: sudo apt-get update
     - name: Install apt packages
       run: sudo apt-get install -y imagemagick tesseract-ocr libgeos-dev libproj-dev postgresql-10-postgis-2.4
     - name: Build and test with Rake
