@@ -33,7 +33,6 @@ jobs:
     - name: Set up TaxonWorks (Just using Travis configs as-is for now)
       run: |
         cp config/secrets.yml.example config/secrets.yml
-        psql -U postgres -c 'CREATE EXTENSION postgis; CREATE EXTENSION postgis_topology;'
     - name: Build and run tests
       env:
         DATABASE_URL: postgres://postgres:@localhost:5432/test
