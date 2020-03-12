@@ -4,6 +4,7 @@
 #
 test: 
   adapter: postgis
+  host: localhost
   encoding: utf8 
   postgis_extension: true
   pool: 5
