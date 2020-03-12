@@ -1,0 +1,5 @@
+test: 
+  adapter: postgis
+  encoding: utf8 
+  postgis_extension: true
+  pool: 5
