@@ -42,6 +42,7 @@ jobs:
         sudo apt-get install -y imagemagick tesseract-ocr libgeos-dev libproj-dev
     - name: Set up TaxonWorks (Just using Travis configs as-is for now)
       run: |
+        cp config/application_settings.yml.travis config/application_settings.yml
         cp config/secrets.yml.example config/secrets.yml
         cp config/database.yml.github config/database.yml
     - name: Build and run tests
