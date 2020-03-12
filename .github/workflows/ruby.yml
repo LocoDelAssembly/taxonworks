@@ -38,6 +38,7 @@ jobs:
     - name: Set up TaxonWorks (Just using Travis configs as-is for now)
       run: |
         cp config/secrets.yml.example config/secrets.yml
+        cp config/database.yml.github config/database.yml
     - name: Build and run tests
       env:
         DATABASE_URL: postgres://postgres:@localhost:5432/test
