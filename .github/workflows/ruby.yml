@@ -25,6 +25,9 @@ jobs:
       uses: actions/setup-ruby@v1
       with:
         ruby-version: 2.6.5
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '10.x'
     - uses: actions/cache@v1
       with:
         path: vendor/bundle
@@ -48,4 +51,5 @@ jobs:
         bundle install --jobs 4 --retry 3
         bundle exec rake db:create
         bundle exec rake db:migrate
+        NODE_OPTIONS="--max-old-space-size=4096" bundle exec rake assets:precompile
         bundle exec rake
