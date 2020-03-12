@@ -41,7 +41,6 @@ jobs:
         cp config/database.yml.github config/database.yml
     - name: Build and run tests
       env:
-        DATABASE_URL: postgres://postgres:@localhost:5432/test
         RAILS_ENV: test
       run: |
         gem install bundler
