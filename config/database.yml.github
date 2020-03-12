@@ -1,5 +1,12 @@
+
+#
+# This is for github configuration only.
+#
 test: 
   adapter: postgis
   encoding: utf8 
   postgis_extension: true
   pool: 5
+  database: taxonworks_test
+  username: postgres
+  password:
