@@ -10,6 +10,9 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        worker: [0, 1, 2, 3, 4]
     services:
       db:
         image: mdillon/postgis:11
@@ -34,13 +37,17 @@ jobs:
         key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
         restore-keys: |
           ${{ runner.os }}-gems-
+    - uses: actions/cache@v1
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
     - name: Install apt packages
       run: |
-        node -v
-        firefox --version
         sudo apt-get update
         sudo apt-get install -y imagemagick tesseract-ocr libgeos-dev libproj-dev
-    - name: Set up TaxonWorks (Just using Travis configs as-is for now)
+    - name: Set up TaxonWorks
       run: |
         cp config/application_settings.yml.travis config/application_settings.yml
         cp config/secrets.yml.example config/secrets.yml
@@ -48,11 +55,13 @@ jobs:
     - name: Build and run tests
       env:
         RAILS_ENV: test
+        TEST_WORKER: ${{ matrix.worker }}
+        TEST_WORKERS: 5
       run: |
+        npm install
         gem install bundler
         bundle config path vendor/bundle
         bundle install --jobs 4 --retry 3
         bundle exec rake db:create
         bundle exec rake db:migrate
-        NODE_OPTIONS="--max-old-space-size=4096" bundle exec rake assets:precompile
-        bundle exec rake
+        .travis/spec_runner.sh
