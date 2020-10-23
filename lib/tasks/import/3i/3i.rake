@@ -2,7 +2,7 @@ require 'fileutils'
 
 ### rake tw:project_import:access3i:import_all data_directory=/Users/proceps/src/sf/import/3i/TXT/ no_transaction=true
 ### rake tw:db:restore backup_directory=/Users/proceps/src/sf/import/3i/pg_dumps/ file=localhost_2018-05-15_200847UTC.dump
-# ./bin/webpack-dev-serverrake tw:project_import:access3i:import_all data_directory=/Users/proceps/src/sf/import/3i/TXT/ no_transaction=true
+# ./bin/webpack-dev-server
 
 # clean dump "localhost_2018-08-06_190510UTC.dump"
 # 3i + odonata dump "localhost_2018-08-14_171558UTC.dump"
@@ -1025,6 +1025,7 @@ namespace :tw do
             end
             unless row['KeyN'].blank?
               row['KeyN'].gsub(' ', '').split(',').each do |kn|
+                # CLASS NAME HAS NOW CHANGED
                 a = ObservationMatrixRowItem::SingleOtu.create(observation_matrix_id: @data.keyn[kn], otu_id: taxon.otus.first.id)
                 byebug if a.id.nil?
               end

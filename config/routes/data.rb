@@ -138,6 +138,7 @@ resources :collecting_events do
   collection do
     get :attributes, defaults: {format: :json}
     get :select_options, defaults: {format: :json}
+    get :parse_verbatim_label, defaults: {format: :json}
 
     post :preview_castor_batch_load
     post :create_castor_batch_load
@@ -229,7 +230,7 @@ resources :downloads, except: [:edit, :new, :create] do
     get 'list'
   end
   member do
-    get 'download_file'
+    get 'file'
   end
 end
 
@@ -237,14 +238,24 @@ resources :extracts do
   concerns [:data_routes]
 end
 
-resources :geographic_areas do
-  concerns [:data_routes]
+resources :geographic_areas, only: [:index, :show] do
+
   collection do
+    get 'download'
+    get 'list'
+    get 'autocomplete'
+    get 'search'
+
     post 'display_coordinates' # TODO should not be POST
     get 'display_coordinates', as: 'getdisplaycoordinates'
     get :select_options, defaults: {format: :json}
     get :by_lat_long, defaults: {format: :json}
   end
+  
+  member do
+    get 'related'
+  end
+
 end
 
 resources :gene_attributes do
@@ -415,6 +426,7 @@ resources :otus do
   resources :biological_associations, shallow: true, only: [:index], defaults: {format: :json}
   resources :asserted_distributions, shallow: true, only: [:index], defaults: {format: :json}
   resources :common_names, shallow: true, only: [:index], defaults: {format: :json}
+  resources :taxon_determinations, shallow: true, only: [:index], defaults: {format: :json}
 
   resources :contents, only: [:index]
 
@@ -442,6 +454,7 @@ resources :otus do
     get :timeline, defaults: {format: :json}
     get :navigation, defaults: {format: :json}
     get :breadcrumbs, defaults: {format: :json}
+    get :coordinate, defaults: {format: :json}
   end
 
 end
@@ -571,6 +584,9 @@ resources :sources do
     post :preview_bibtex_batch_load # should be get
     post :create_bibtex_batch_load
     get :parse, defaults: {format: :json}
+    get :citation_object_types, defaults: {format: :json}
+    get :csl_types, defaults: {format: :json}
+    get :generate, defaults: {format: :json}
   end
 
   member do
@@ -622,6 +638,8 @@ resources :taxon_names do
     get :random
 
     get :rank_table, defaults: {format: :json}
+    get :predicted_rank, {format: :json}
+
   end
 
   member do

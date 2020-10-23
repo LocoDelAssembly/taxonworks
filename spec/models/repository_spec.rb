@@ -6,7 +6,7 @@ describe Repository, type: :model do
   context 'validation' do
     before(:each) {repository.valid?}
     specify 'non collector/updater required attributes' do
-      expect(repository.errors.keys.sort).to eq([:acronym, :name,  :status, :url].sort)
+      expect(repository.errors.keys.sort).to eq([:acronym, :name ].sort)
     end
   end
 
@@ -25,7 +25,7 @@ describe Repository, type: :model do
     let!(:s2) { Specimen.create!(total: 1, repository: r2) }
 
     specify '#used_recently' do
-      expect(Repository.used_recently).to contain_exactly(r1, r2)
+      expect(Repository.used_recently(s1.created_by_id, s1.project_id)).to contain_exactly(r1.id, r2.id)
     end
 
     specify '#used_in_project' do

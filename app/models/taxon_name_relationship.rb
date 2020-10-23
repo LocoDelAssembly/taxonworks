@@ -67,6 +67,8 @@ class TaxonNameRelationship < ApplicationRecord
 
   validate :validate_type, :validate_subject_and_object_are_not_identical
 
+  validate :subject_and_object_in_same_project
+
   with_options unless: -> {!subject_taxon_name || !object_taxon_name} do |v|
     v.validate :validate_subject_and_object_share_code,
       :validate_uniqueness_of_typification_object,
@@ -250,7 +252,11 @@ class TaxonNameRelationship < ApplicationRecord
 
   protected
 
-  #region Validation
+  def subject_and_object_in_same_project
+    if subject_taxon_name && object_taxon_name
+      errors.add(:base, 'one name is not in the same project as the other') if subject_taxon_name.project_id != object_taxon_name.project_id
+    end
+  end
 
   def validate_type
     unless TAXON_NAME_RELATIONSHIP_NAMES.include?(type)
@@ -289,7 +295,7 @@ class TaxonNameRelationship < ApplicationRecord
   def validate_subject_and_object_ranks
     tname = self.type_name
 
-    if tname =~ /TaxonNameRelationship::(Icnp|Icn|Iczn|Ictv)/ && tname != 'TaxonNameRelationship::Iczn::Validating::UncertainPlacement'
+    if tname =~ /TaxonNameRelationship::(Icnp|Icn|Iczn|Icvcn)/ && tname != 'TaxonNameRelationship::Iczn::Validating::UncertainPlacement'
       rank_group = self.subject_taxon_name.rank_class.try(:parent)
       unless rank_group == self.object_taxon_name.rank_class.try(:parent)
         errors.add(:object_taxon_name_id, "Rank of related taxon should be in the #{rank_group.try(:rank_name)} rank group, not #{self.object_taxon_name.rank_class.try(:rank_name)}")
@@ -422,10 +428,6 @@ class TaxonNameRelationship < ApplicationRecord
     TAXON_NAME_RELATIONSHIP_NAMES_INVALID.include?(type_name)
   end
 
-  #endregion
-
-  #region Soft Validation
-
   def sv_validate_required_relationships
     object_relationships = TaxonNameRelationship.where_object_is_taxon_name(self.object_taxon_name).not_self(self).collect{|r| r.type}
     required = self.type_class.required_taxon_name_relationships - object_relationships
@@ -435,10 +437,13 @@ class TaxonNameRelationship < ApplicationRecord
   end
 
   def sv_validate_disjoint_relationships
-    subject_relationships = TaxonNameRelationship.where_subject_is_taxon_name(self.subject_taxon_name).not_self(self)
-    subject_relationships.find_each  do |i|
-      if self.type_class.disjoint_taxon_name_relationships.include?(i.type_name)
-        soft_validations.add(:type, "#{self.subject_status.capitalize} relationship is conflicting with another relationship: '#{i.subject_status}'")
+    tname = self.type_name
+    if tname =~ /TaxonNameRelationship::(Icnp|Icn|Iczn|Icvcn)/ && tname != 'TaxonNameRelationship::Iczn::Validating::UncertainPlacement'
+      subject_relationships = TaxonNameRelationship.where_subject_is_taxon_name(self.subject_taxon_name).not_self(self)
+      subject_relationships.each  do |i|
+        if self.type_class.disjoint_taxon_name_relationships.include?(i.type_name)
+          soft_validations.add(:type, "#{self.subject_status.capitalize} relationship is conflicting with another relationship: '#{i.subject_status}'")
+        end
       end
     end
   end
@@ -460,7 +465,7 @@ class TaxonNameRelationship < ApplicationRecord
     compare = disjoint_subject_classes & classifications
     compare.each do |i|
       c = i.demodulize.underscore.humanize.downcase
-      soft_validations.add(:type, "#{self.subject_status.capitalize} ronflicting with the status: '#{c}'")
+      soft_validations.add(:type, "#{self.subject_status.capitalize} conflicting with the status: '#{c}'")
       soft_validations.add(:subject_taxon_name_id, "#{self.subject_taxon_name.cached_html} has a conflicting status: '#{c}'")
     end
   end
@@ -752,8 +757,6 @@ class TaxonNameRelationship < ApplicationRecord
     end
     false
   end
-
-  #endregion
 
   def self.collect_to_s(*args)
     args.collect{|arg| arg.to_s}

@@ -10,14 +10,13 @@
 
 import L from 'leaflet'
 import '@geoman-io/leaflet-geoman-free'
-
-delete L.Icon.Default.prototype._getIconUrl
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png').default,
-  iconUrl: require('leaflet/dist/images/marker-icon.png').default,
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png').default
-})
+import 'leaflet.pattern/src/Pattern'
+import 'leaflet.pattern/src/Pattern.SVG'
+import 'leaflet.pattern/src/StripePattern'
+import 'leaflet.pattern/src/PatternShape'
+import 'leaflet.pattern/src/PatternShape.SVG'
+import 'leaflet.pattern/src/PatternPath'
+import 'leaflet.pattern/src/PatternCircle'
 
 export default {
   props: {
@@ -109,6 +108,10 @@ export default {
         return []
       }
     },
+    zoomOnClick: {
+      type: Boolean,
+      default: true
+    },
     fitBounds: {
       type: Boolean,
       default: true
@@ -121,6 +124,7 @@ export default {
       mapId: Math.random().toString(36).substring(7),
       mapObject: undefined,
       drawnItems: undefined,
+      geographicArea: undefined,
       drawControl: undefined,
       tiles: {
         osm: L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -141,6 +145,7 @@ export default {
     geojson: {
       handler (newVal) { 
         this.drawnItems.clearLayers()
+        this.geographicArea.clearLayers()
         this.geoJSON(newVal)
       },
       deep: true
@@ -150,12 +155,14 @@ export default {
     }
   },
   mounted () {
-    this.mapObject = L.map(this.mapId, {
+    this.mapObject = L.map(this.$el, {
       center: this.center,
       zoom: this.zoom
     })
     this.drawnItems = new L.FeatureGroup()
+    this.geographicArea = new L.FeatureGroup()
     this.mapObject.addLayer(this.drawnItems)
+    this.mapObject.addLayer(this.geographicArea)
 
     this.addDrawControllers()
     this.handleEvents()
@@ -191,6 +198,7 @@ export default {
     },
     clearFound () {
       this.drawnItems.clearLayers()
+      this.geographicArea.clearLayers()
     },
     addDrawControllers () {
       this.tiles.osm.addTo(this.mapObject)
@@ -216,14 +224,6 @@ export default {
           removalMode: this.removalMode
         })
       }
-
-      this.mapObject.pm.enableDraw('Marker', { tooltips: this.tooltips })
-      this.mapObject.pm.enableDraw('Polygon', { tooltips: this.tooltips })
-      this.mapObject.pm.enableDraw('Circle', { tooltips: this.tooltips })
-      this.mapObject.pm.enableDraw('Line', { tooltips: this.tooltips })
-      this.mapObject.pm.enableDraw('Rectangle', { tooltips: this.tooltips })
-      this.mapObject.pm.enableDraw('Cut', { tooltips: this.tooltips })
-      this.mapObject.pm.toggleGlobalDragMode()
     },
     handleEvents () {
       const that = this
@@ -253,6 +253,7 @@ export default {
     },
     removeLayers () {
       this.drawnItems.clearLayers()
+      this.geographicArea.clearLayers()
     },
     editedLayer (e) {
       var layer = e.target
@@ -278,15 +279,16 @@ export default {
     addGeoJsonLayer (geoJsonLayers) {
       const that = this
       let index = -1
+
       L.geoJson(geoJsonLayers, {
         style: function (feature) {
           index = index + 1
           return that.randomShapeStyle(index)
         },
         filter: function (feature) {
-          if(feature.properties.hasOwnProperty('geographic_area')) {
-            L.GeoJSON.geometryToLayer(feature, Object.assign({}, that.randomShapeStyle(index), { pmIgnore: true })).addTo(that.drawnItems)
-            return false 
+          if (feature.properties.hasOwnProperty('geographic_area')) {
+            that.geographicArea.addLayer(L.GeoJSON.geometryToLayer(feature, Object.assign({}, feature.properties.hasOwnProperty('is_absent') && feature.properties.is_absent ? that.stripeShapeStyle(index) : that.randomShapeStyle(index), { pmIgnore: true })))
+            return false
           }
           return true
         },
@@ -297,10 +299,21 @@ export default {
           return shape
         }
       }).addTo(this.drawnItems)
-      
+
       if (this.fitBounds) {
-        this.mapObject.fitBounds(this.drawnItems.getBounds())
+        if (this.getLayersCount(this.drawnItems)) {
+          this.mapObject.fitBounds([].concat(this.drawnItems.getBounds()))
+        }
+        else if (this.geographicArea.getLayers().length) {
+          this.mapObject.fitBounds(this.geographicArea.getBounds())
+        }
+        else {
+          this.mapObject.fitBounds([0,0])
+        }
       }
+    },
+    getLayersCount (group) {
+      return group.getLayers()[0]._layers ? Object.keys(group.getLayers()[0]._layers).length : undefined
     },
     getRandomColor() {
       const letters = '0123456789ABCDEF'
@@ -313,21 +326,45 @@ export default {
     generateHue (index) {
       const PHI = (1 + Math.sqrt(5)) / 2
       const n = index * PHI - Math.floor(index * PHI)
-      return `hsl(${Math.floor(n * 256)}, ${Math.floor(n * 70) + 40}% , ${(Math.floor((n) + 1) * 60) + 20}%)`
+      return `hsl(${Math.floor(n * 256)}, ${Math.floor(n * 50) + 100}% , ${(Math.floor((n) + 1) * 60) + 10}%)`
     },
     defaultShapeStyle () {
       return {
         weight: 1,
         dashArray: '',
-        fillOpacity: 0.4
+        fillOpacity: 0.6
       }
     },
     randomShapeStyle (index) {
       return {
         weight: 1,
-        color: this.generateHue(index),
+        color: this.generateHue(index + 6),
+        dashArray: '3',
+        dashOffset: '3',
+        fillOpacity: 0.5
+      }
+    },
+    stripeShapeStyle (index) {
+      const color = this.generateHue(index)
+      let stripes = new L.StripePattern({
+        patternContentUnits: 'objectBoundingBox',
+        patternUnits: 'objectBoundingBox',
+        weight: 0.05,
+        spaceWeight: 0.05,
+        height: 0.1,
+        angle: 45,
+        color: this.generateHue(index + 6),
+        opacity: 0.9,
+        spaceColor: color,
+        spaceOpacity: 0.2
+      })
+      stripes.addTo(this.mapObject)
+      return {
+        color: color,
+        weight: 2,
         dashArray: '',
-        fillOpacity: 0.4
+        fillOpacity: 1,
+        fillPattern: stripes
       }
     },
     onMyFeatures (feature, layer) {
@@ -335,9 +372,13 @@ export default {
         'pm:edit': this.editedLayer,
         click: this.zoomToFeature
       })
+      if (feature.properties.hasOwnProperty('popup')) {
+        layer.bindPopup(feature.properties.popup)
+      }
       layer.pm.disable()
     },
     zoomToFeature (e) {
+      if (!this.zoomOnClick) return
       const layer = e.target
       if (this.fitBounds) {
         if (layer instanceof L.Marker || layer instanceof L.Circle) {

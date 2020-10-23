@@ -15,6 +15,14 @@
         }"
         @getItem="getTaxon"/>
     </div>
+    <span
+      class="horizontal-left-content"
+      v-if="value">
+      <span v-html="value.object_tag"/>
+      <span
+        class="button circle-button btn-undo button-default"
+        @click="$emit('input', undefined)"/>
+    </span>
   </div>
 </template>
 
@@ -23,6 +31,8 @@
 import Autocomplete from 'components/autocomplete'
 import { GetTaxonName } from '../../request/resources'
 import { MutationNames } from '../../store/mutations/mutations'
+
+import { URLParamsToJSON } from 'helpers/url/parse.js'
 
 export default {
   props: {
@@ -33,6 +43,12 @@ export default {
   },
   components: {
     Autocomplete
+  },
+  mounted () {
+    const params = URLParamsToJSON(location.href)
+    if (params.ancestor_id) {
+      this.getTaxon({ id: params.ancestor_id })
+    }
   },
   methods: {
     getTaxon (event) {

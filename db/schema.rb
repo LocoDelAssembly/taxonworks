@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_03_26_194426) do
+ActiveRecord::Schema.define(version: 2020_09_09_214219) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "fuzzystrmatch"
@@ -162,6 +162,7 @@ ActiveRecord::Schema.define(version: 2020_03_26_194426) do
     t.integer "updated_by_id", null: false
     t.integer "project_id", null: false
     t.string "inverted_name"
+    t.text "definition"
     t.index ["created_by_id"], name: "bio_rel_created_by"
     t.index ["project_id"], name: "bio_rel_project"
     t.index ["updated_by_id"], name: "bio_rel_updated_by"
@@ -557,6 +558,7 @@ ActiveRecord::Schema.define(version: 2020_03_26_194426) do
     t.string "default_unit"
     t.string "description_name"
     t.string "key_name"
+    t.integer "weight"
     t.index ["created_by_id"], name: "index_descriptors_on_created_by_id"
     t.index ["name"], name: "index_descriptors_on_name"
     t.index ["project_id"], name: "index_descriptors_on_project_id"
@@ -1672,6 +1674,7 @@ ActiveRecord::Schema.define(version: 2020_03_26_194426) do
     t.datetime "updated_at", null: false
     t.json "result_boundary_coordinates"
     t.json "result_ocr"
+    t.datetime "in_progress"
     t.index ["depiction_id"], name: "index_sqed_depictions_on_depiction_id"
     t.index ["project_id"], name: "index_sqed_depictions_on_project_id"
   end

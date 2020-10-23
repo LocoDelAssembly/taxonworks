@@ -1,6 +1,11 @@
 module Queries
   module Person
+
     class Filter
+
+      # include Queries::Concerns::Identifiers
+      # include Queries::Concerns::Tags
+      # include Queries::Concerns::AlternateValues
 
       # - use similar/identical methods in IsData
       attr_accessor :limit_to_roles
@@ -16,8 +21,8 @@ module Queries
         @first_name = params[:first_name]
         @last_name = params[:last_name]
         @last_name_starts_with = params[:last_name_starts_with]
-
         @levenshtein_cuttoff = params[:levenshtein_cuttoff] || 4
+       # set_alternate_value(params)
       end
 
       # @return [Arel::Table]
@@ -52,7 +57,9 @@ module Queries
           match_first_name,
           match_last_name,
           match_roles,
-          match_start_of_last_name
+          match_start_of_last_name,
+       #  matching_alternate_value_on_values(:last_name, [last_name]),
+       #  matching_alternate_value_on_values(:first_name, [first_name]),
         ].compact
 
         return nil if clauses.empty?

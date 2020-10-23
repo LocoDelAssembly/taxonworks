@@ -66,9 +66,9 @@ class Georeference < ApplicationRecord
   include Housekeeping
   include Shared::Notes
   include Shared::Tags
-  include Shared::IsData
   include Shared::Citations
   include Shared::HasRoles
+  include Shared::IsData
 
   attr_accessor :iframe_response # used to pass the geolocate from Tulane through
 
@@ -175,12 +175,12 @@ class Georeference < ApplicationRecord
 
   # @return [Float]
   def latitude
-    geographic_item.center_coords[1]
+    geographic_item.center_coords[0]
   end
 
   # @return [Float]
   def longitude
-    geographic_item.center_coords[0]
+    geographic_item.center_coords[1]
   end
 
   # TODO: parametrize to include gazeteer

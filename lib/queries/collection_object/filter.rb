@@ -1,15 +1,13 @@
 module Queries
   module CollectionObject
-    # !! does not inherit from base query
 
     # TODO 
-    # - use date processing?
+    # - use date processing? / DateConcern
     # - remove all prepended 'query'
     # - add tests(?) for unchecked params
     # - syncronize with GIS/GEO
 
-    # Use DateConcern
-
+    # !! does not inherit from base query
     class Filter
 
       include Queries::Concerns::Tags
@@ -18,9 +16,14 @@ module Queries
 
       # TODO: look for name collisions with CE filter
 
+      # @param [String, nil]
+      #    one of 'Specimen', 'Lot', or 'RangedLot'
+      attr_accessor :collection_object_type
+
+      # @param [String, nil]
+      #  'true' - order by updated_at
+      #  'false', nil - do not apply ordering
       # @return [Boolen, nil]
-      #  true - order by updated_at
-      #  false, nil - do not apply ordering 
       attr_accessor :recent 
 
       # [Array]
@@ -83,6 +86,13 @@ module Queries
       # @return [Protonym#id, nil]
       attr_accessor :type_specimen_taxon_name_id
 
+      # @return [Repository#id, nil]
+      attr_accessor :repository_id
+
+      # @return [Array]
+      #   of type_materials
+      attr_accessor :is_type
+
       # @return [SledImage#id, nil]
       attr_accessor :sled_image_id
 
@@ -92,12 +102,15 @@ module Queries
 
         @recent = params[:recent].blank? ? false : true
 
-        @collecting_event_ids = params[:collecting_event_id].blank? ? [] : params[:collecting_event_id]
+        @collecting_event_ids = params[:collecting_event_ids] || []
 
         @otu_ids = params[:otu_ids] || []
+        @is_type = params[:is_type] || []
+
         @otu_descendants = (params[:otu_descendants]&.downcase == 'true' ? true : false) if !params[:otu_descendants].nil?
 
         @ancestor_id = params[:ancestor_id].blank? ? nil : params[:ancestor_id]
+        @collection_object_type = params[:collection_object_type].blank? ? nil : params[:collection_object_type]
 
         @current_determinations = (params[:current_determinations]&.downcase == 'true' ? true : false) if !params[:current_determinations].nil?
         @validity = (params[:validity]&.downcase == 'true' ? true : false) if !params[:validity].nil?
@@ -110,6 +123,8 @@ module Queries
 
         @biological_relationship_ids = params[:biological_relationship_ids] || []
 
+
+
         # This needs to be params[:collecting_event], for now, exclude keyword_ids ... (and!?)
         @collecting_event_query = Queries::CollectingEvent::Filter.new(params.select{|a,b| a.to_sym != :keyword_ids} )
 
@@ -119,6 +134,8 @@ module Queries
 
         @sled_image_id = params[:sled_image_id].blank? ? nil : params[:sled_image_id]
         @depicted = (params[:depicted]&.downcase == 'true' ? true : false) if !params[:depicted].nil?
+
+        @repository_id = params[:repository_id].blank? ? nil : params[:repository_id]
 
         set_identifier(params)
         set_tags_params(params)
@@ -131,7 +148,7 @@ module Queries
       end
 
       def base_query
-        ::CollectionObject.select('*')
+        ::CollectionObject.select('collection_objects.*')
       end
 
       # @return [Arel::Table]
@@ -162,6 +179,11 @@ module Queries
       def biocuration_facet
         return nil if biocuration_class_ids.empty?
         ::CollectionObject::BiologicalCollectionObject.joins(:biocuration_classifications).where(biocuration_classifications: {biocuration_class_id: biocuration_class_ids}) 
+      end
+
+      def type_facet 
+        return nil if collection_object_type.nil?
+        table[:type].eq(collection_object_type)
       end
 
       def depicted_facet 
@@ -201,10 +223,15 @@ module Queries
           ::CollectionObject.dwc_not_indexed
       end
 
-    # @return Scope
+      # @return Scope
       def collecting_event_ids_facet
         return nil if collecting_event_ids.empty?
         table[:collecting_event_id].eq_any(collecting_event_ids)
+      end
+
+      def repository_facet
+        return nil if repository_id.blank?
+        table[:repository_id].eq(repository_id)
       end
 
       def collecting_event_merge_clauses
@@ -245,7 +272,9 @@ module Queries
         clauses = []
 
         clauses += [
-          collecting_event_ids_facet
+          collecting_event_ids_facet,
+          type_facet,
+          repository_facet
         ]
         clauses.compact!
         clauses
@@ -258,9 +287,10 @@ module Queries
         clauses += [
           otus_facet,
           type_material_facet,
+          type_material_type_facet,
           ancestors_facet,
           matching_keyword_ids,   # See Queries::Concerns::Tags
-          created_modified_facet, # See Queries::Concerns::Users
+          created_updated_facet, # See Queries::Concerns::Users
           identifier_between_facet,
           identifier_facet,
           identifier_namespace_facet,
@@ -309,11 +339,23 @@ module Queries
       end
 
       # @return [Scope]
-      def type_material_facet 
+      def type_material_facet
         return nil if type_specimen_taxon_name_id.nil?
 
         w = type_materials_table[:collection_object_id].eq(table[:id])
           .and( type_materials_table[:protonym_id].eq(type_specimen_taxon_name_id) )
+
+        ::CollectionObject.where(
+          ::TypeMaterial.where(w).arel.exists
+        )
+      end
+
+      # @return [Scope]
+      def type_material_type_facet
+        return nil if is_type.empty?
+
+        w = type_materials_table[:collection_object_id].eq(table[:id])
+          .and( type_materials_table[:type_type].eq_any(is_type) )
 
         ::CollectionObject.where(
           ::TypeMaterial.where(w).arel.exists

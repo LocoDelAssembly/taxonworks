@@ -16,10 +16,11 @@
         </li>
       </ul>
     </div>
-    <nav-bar> 
+    <nav-bar class="source-navbar">
       <div class="flex-separate full_width">
         <div class="middle">
           <span
+            class="word_break"
             v-if="source.id"
             v-html="source.cached"/>
           <span v-else>New record</span>
@@ -30,7 +31,7 @@
             <radial-annotator :global-id="source.global_id"/>
             <radial-object :global-id="source.global_id"/>
             <add-source
-              :project_source_id="source.project_source_id"
+              :project-source-id="source.project_source_id"
               :id="source.id"/>
           </template>
         </div>
@@ -50,6 +51,13 @@
             Save
           </button>
           <button
+            v-if="source.type === 'Source::Verbatim' && source.id"
+            class="button normal-input button-submit button-size margin-small-right"
+            type="button"
+            @click="convert">
+            To BibTeX
+          </button>
+          <button
             :disabled="!source.id"
             v-shortkey="[getMacKey(), 'c']"
             @shortkey="cloneSource"
@@ -59,6 +67,7 @@
             Clone
           </button>
           <button
+            v-help.section.navBar.crossRef
             class="button normal-input button-default button-size separate-left"
             type="button"
             @click="showModal = true">
@@ -87,7 +96,7 @@
         </div>
       </div>
     </nav-bar>
-    <source-type/>
+    <source-type class="margin-medium-bottom"/>
     <recent-component
       v-if="showRecent"
       @close="showRecent = false"/>
@@ -101,6 +110,11 @@
     <bibtex-button
       v-if="showBibtex"
       @close="showBibtex = false"/>
+    <spinner-component
+      v-if="settings.isConverting"
+      :full-screen="true"
+      :logo-size="{ width: '100px', height: '100px'}"
+      legend="Converting verbatim to BiBTeX..."/>
   </div>
 </template>
 
@@ -108,6 +122,7 @@
 
 import SourceType from './components/sourceType'
 import RecentComponent from './components/recent'
+import SpinnerComponent from 'components/spinner'
 
 import CrossRef from './components/crossRef'
 import BibtexButton from './components/bibtex'
@@ -144,7 +159,8 @@ export default {
     BibtexButton,
     AddSource,
     NavBar,
-    RecentComponent
+    RecentComponent,
+    SpinnerComponent
   },
   computed: {
     section () {
@@ -176,8 +192,10 @@ export default {
   },
   watch: {
     source: { 
-      handler () {
-        this.settings.lastEdit = Date.now()
+      handler (newVal, oldVal) {
+        if (newVal.id === oldVal.id) {
+          this.settings.lastEdit = Date.now()
+        }
       },
       deep: true
     }
@@ -208,6 +226,9 @@ export default {
     },
     cloneSource () {
       this.$store.dispatch(ActionNames.CloneSource)
+    },
+    convert () {
+      this.$store.dispatch(ActionNames.ConvertToBibtex)
     },
     getMacKey: GetMacKey
   }
