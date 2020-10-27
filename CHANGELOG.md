@@ -7,7 +7,9 @@ This project <em>does not yet</em> adheres to [Semantic Versioning](https://semv
 
 ## [unreleased]
 
-\-
+### Added
+- Taxon determination, citations and collecting event information in specimen record on browse OTU
+- Serial facet on filter sources
 
 ## [0.14.1] - 2020-10-22
 
